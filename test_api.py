@@ -1,14 +1,15 @@
-import httpx
+from fastapi.testclient import TestClient
+from main import app  # change if your file name is different
 
-BASE_URL = "http://127.0.0.1:8000"
+client = TestClient(app)
 
 
 def test_full_flow():
     # ----------------------------
     # 1. LOGIN
     # ----------------------------
-    login = httpx.post(
-        f"{BASE_URL}/login",
+    login = client.post(
+        "/login",
         json={
             "username": "admin",
             "password": "admin"
@@ -25,18 +26,14 @@ def test_full_flow():
     # ----------------------------
     # 2. GET ALL CUSTOMERS
     # ----------------------------
-    res = httpx.get(
-        f"{BASE_URL}/customers",
-        headers=headers
-    )
-
+    res = client.get("/customers", headers=headers)
     assert res.status_code == 200
 
     # ----------------------------
-    # 3. CREATE CUSTOMER (FIXED FOR YOUR PYDANTIC MODEL)
+    # 3. CREATE CUSTOMER
     # ----------------------------
-    res = httpx.post(
-        f"{BASE_URL}/customers",
+    res = client.post(
+        "/customers",
         json={
             "name": "AI Test User",
             "email": "ai@test.com",
@@ -50,26 +47,20 @@ def test_full_flow():
         headers=headers
     )
 
-    # Accept 200 or 201 depending on API behavior
     assert res.status_code in [200, 201]
-
     customer_id = res.json().get("id")
 
     # ----------------------------
-    # 4. GET CUSTOMER BY ID
+    # 4. GET BY ID
     # ----------------------------
-    res = httpx.get(
-        f"{BASE_URL}/customers/{customer_id}",
-        headers=headers
-    )
-
+    res = client.get(f"/customers/{customer_id}", headers=headers)
     assert res.status_code == 200
 
     # ----------------------------
-    # 5. UPDATE CUSTOMER
+    # 5. UPDATE
     # ----------------------------
-    res = httpx.put(
-        f"{BASE_URL}/customers/{customer_id}",
+    res = client.put(
+        f"/customers/{customer_id}",
         json={
             "name": "Updated User",
             "email": "updated@test.com",
@@ -86,10 +77,10 @@ def test_full_flow():
     assert res.status_code == 200
 
     # ----------------------------
-    # 6. DELETE CUSTOMER
+    # 6. DELETE
     # ----------------------------
-    res = httpx.delete(
-        f"{BASE_URL}/customers/{customer_id}",
+    res = client.delete(
+        f"/customers/{customer_id}",
         headers=headers
     )
 
