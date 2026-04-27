@@ -5,12 +5,24 @@ def init_db():
     conn = psycopg2.connect(os.getenv("DATABASE_URL"))
     cursor = conn.cursor()
 
+    # Customers table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS customers (
             id SERIAL PRIMARY KEY,
             name TEXT,
-            email TEXT,
-            address JSONB
+            email TEXT
+        )
+    """)
+
+    # Addresses table (MISSING BEFORE → now fixed)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS addresses (
+            id SERIAL PRIMARY KEY,
+            customer_id INTEGER REFERENCES customers(id),
+            street TEXT,
+            city TEXT,
+            state TEXT,
+            zip TEXT
         )
     """)
 
