@@ -154,6 +154,33 @@ def get_customer(id: int):
         }
     }
 
+@app.get("/customers/by-city/{city}", dependencies=[Depends(verify_token)])
+def get_by_city(city: str):
+    cursor.execute("""
+        SELECT c.id, c.name, c.email,
+               a.street, a.city, a.state, a.zip
+        FROM customers c
+        JOIN addresses a ON c.id = a.customer_id
+        WHERE a.city = %s
+    """, (city,))
+
+    rows = cursor.fetchall()
+
+    return [
+        {
+            "id": r[0],
+            "name": r[1],
+            "email": r[2],
+            "address": {
+                "street": r[3],
+                "city": r[4],
+                "state": r[5],
+                "zip": r[6]
+            }
+        }
+        for r in rows
+    ]
+
 
 # ---------------- UPDATE ----------------
 @app.put("/customers/{id}", dependencies=[Depends(verify_token)])
