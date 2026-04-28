@@ -14,17 +14,17 @@ def init_db():
         )
     """)
 
-    # Addresses table (MISSING BEFORE → now fixed)
+    # Addresses table
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS addresses (
-        id SERIAL PRIMARY KEY,
-        customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
-        street TEXT,
-        city TEXT,
-        state TEXT,
-        zip TEXT
-    )
-""")
+        CREATE TABLE IF NOT EXISTS addresses (
+            id SERIAL PRIMARY KEY,
+            customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+            street TEXT,
+            city TEXT,
+            state TEXT,
+            zip TEXT
+        )
+    """)
 
     conn.commit()
     conn.close()

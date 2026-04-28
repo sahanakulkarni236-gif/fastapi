@@ -4,12 +4,12 @@ from pydantic import BaseModel
 import psycopg2
 
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # ---------------- APP ----------------
 app = FastAPI()
 
-# ---------------- DB ----------------
+# ---------------- DB (LOCALHOST FIXED) ----------------
 conn = psycopg2.connect(
     host="localhost",
     database="mydb",
@@ -23,14 +23,14 @@ cursor = conn.cursor()
 SECRET_KEY = "mysecretkey"
 ALGORITHM = "HS256"
 
-# ---------------- SECURITY (IMPORTANT FOR SWAGGER 🔒) ----------------
+# ---------------- SECURITY ----------------
 security = HTTPBearer()
 
 # ---------------- TOKEN ----------------
 def create_token(data: dict):
     to_encode = data.copy()
     to_encode.update({
-        "exp": datetime.utcnow() + timedelta(hours=1)
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
     })
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
