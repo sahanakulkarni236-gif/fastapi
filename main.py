@@ -1,3 +1,6 @@
+import logging
+import os
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -6,10 +9,14 @@ import psycopg2
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
 
+# ---------------- LOGGING ----------------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # ---------------- APP ----------------
 app = FastAPI()
 
-# ---------------- DB (LOCALHOST FIXED) ----------------
+# ---------------- DB ----------------
 conn = psycopg2.connect(
     host="localhost",
     database="mydb",
@@ -40,6 +47,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
+        logger.error("Invalid token used")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
@@ -66,15 +74,19 @@ class LoginRequest(BaseModel):
 @app.post("/login")
 def login(data: LoginRequest):
     if data.username == "admin" and data.password == "admin":
+        logger.info("User logged in successfully")
         token = create_token({"user": data.username})
         return {"access_token": token}
 
+    logger.warning("Invalid login attempt")
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
 # ---------------- CREATE CUSTOMER ----------------
 @app.post("/customers", dependencies=[Depends(verify_token)])
 def create_customer(customer: Customer):
+    logger.info(f"Creating customer: {customer.name}")
+
     cursor.execute(
         "INSERT INTO customers (name, email) VALUES (%s, %s) RETURNING id",
         (customer.name, customer.email)
@@ -96,12 +108,16 @@ def create_customer(customer: Customer):
     )
 
     conn.commit()
+    logger.info(f"Customer created with ID: {customer_id}")
+
     return {"id": customer_id, "message": "Customer created"}
 
 
 # ---------------- GET ALL ----------------
 @app.get("/customers", dependencies=[Depends(verify_token)])
 def get_all():
+    logger.info("Fetching all customers")
+
     cursor.execute("""
         SELECT c.id, c.name, c.email,
                a.street, a.city, a.state, a.zip
@@ -129,6 +145,8 @@ def get_all():
 # ---------------- GET BY ID ----------------
 @app.get("/customers/{id}", dependencies=[Depends(verify_token)])
 def get_customer(id: int):
+    logger.info(f"Fetching customer ID: {id}")
+
     cursor.execute("""
         SELECT c.id, c.name, c.email,
                a.street, a.city, a.state, a.zip
@@ -140,6 +158,7 @@ def get_customer(id: int):
     row = cursor.fetchone()
 
     if not row:
+        logger.warning(f"Customer not found: {id}")
         raise HTTPException(status_code=404, detail="Customer not found")
 
     return {
@@ -154,8 +173,12 @@ def get_customer(id: int):
         }
     }
 
+
+# ---------------- GET BY CITY ----------------
 @app.get("/customers/by-city/{city}", dependencies=[Depends(verify_token)])
 def get_by_city(city: str):
+    logger.info(f"Fetching customers from city: {city}")
+
     cursor.execute("""
         SELECT c.id, c.name, c.email,
                a.street, a.city, a.state, a.zip
@@ -185,6 +208,8 @@ def get_by_city(city: str):
 # ---------------- UPDATE ----------------
 @app.put("/customers/{id}", dependencies=[Depends(verify_token)])
 def update_customer(id: int, customer: Customer):
+    logger.info(f"Updating customer ID: {id}")
+
     cursor.execute(
         "UPDATE customers SET name=%s, email=%s WHERE id=%s",
         (customer.name, customer.email, id)
@@ -203,12 +228,19 @@ def update_customer(id: int, customer: Customer):
     ))
 
     conn.commit()
+    logger.info(f"Customer updated: {id}")
+
     return {"message": "Updated successfully"}
 
 
 # ---------------- DELETE ----------------
 @app.delete("/customers/{id}", dependencies=[Depends(verify_token)])
 def delete_customer(id: int):
+    logger.info(f"Deleting customer ID: {id}")
+
     cursor.execute("DELETE FROM customers WHERE id=%s", (id,))
     conn.commit()
+
+    logger.info(f"Customer deleted: {id}")
+
     return {"message": "Deleted successfully"}
